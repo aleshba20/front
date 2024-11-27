@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="style.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"
+      integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <title>After School Explorers</title>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>{{ sitename }}</h1>
+        <div class="logo-container">
+          <img src="images/logo.png" alt="Logo" class="logo" />
+        </div>
+        <div class="search-container">
+          <input type="text" v-model="searchQuery" placeholder="Search.." />
+          <button class="search-button" v-on:click="searchActivity">
+            Search
+          </button>
+        </div>
+        <br /><br />
+        <div class="button-container">
+          <button
+            class="special-button"
+            v-if="cartItemCount > 0"
+            v-on:click="showCheckout"
+          >
+            {{ cartItemCount }} <span class="fas fa-cart-plus"></span> Checkout
+          </button>
+        </div>
+      </header>
+
+      <br /><br />
+
+      <nav>
+        <div class="hamburger" id="hamburger">&#9776;</div>
+        <div class="nav-links" id="nav-links">
+          <a href="index.html">Social Activities</a>
+        </div>
+      </nav>
+
+      <br /><br />
+      <hr class="divider" />
+      <br />
+
+      <main>
+        <div v-if="showProduct">
+          <label for="sortCriteria">Sort By:</label>
+          <select
+            id="sortCriteria"
+            v-model="sortCriteria"
+            @change="sortActivities"
+          >
+            <option value="name">Name</option>
+            <option value="price">Price</option>
+            <option value="location">Location</option>
+            <option value="quantity">Quantity</option>
+          </select>
+
+          <label for="sortOrder">Order:</label>
+          <select id="sortOrder" v-model="sortOrder" @change="sortActivities">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+
+          <div class="activities-container">
+            <div
+              v-for="activity in filteredAndSortedActivities"
+              :key="activity.id"
+              class="activity"
+            >
+              <figure>
+                <img class="image-1" :src="activity.image" />
+              </figure>
+              <h2 v-text="activity.title"></h2>
+              <p v-text="activity.description"></p>
+              <p class="location">Location: {{ activity.location }}</p>
+              <p class="price">
+                Price: <strong>{{ activity.price }} AED</strong>
+              </p>
+              <p>Rating: <span v-html="activity.stars"></span></p>
+              <p>Remaining stock: {{ remainingStock(activity) }}</p>
+
+              <button
+                v-on:click="addToCart(activity)"
+                v-if="canAddToCart(activity)"
+              >
+                Add to cart
+              </button>
+              <button disabled="disabled" v-else>Add To Cart</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checkout Form -->
+        <div v-else>
+          <h2>Checkout</h2>
+          <p>
+            <strong>First Name:</strong>
+            <input v-model.trim="order.firstName" />
+          </p>
+          <p>
+            <strong>Last Name:</strong>
+            <input v-model="order.lastName" />
+          </p>
+          <p><strong>Address:</strong> <input v-model="order.address" /></p>
+          <p><strong>City:</strong> <input v-model="order.city" /></p>
+          <p>
+            <strong>State:</strong>
+            <select v-model="order.state">
+              <option disabled value="">Select State</option>
+              <option value="Abu Dhabi">Abu Dhabi</option>
+              <option value="Ajman">Ajman</option>
+              <option value="Dubai">Dubai</option>
+              <option value="Fujairah">Fujairah</option>
+              <option value="Ras Al Khaimah">Ras Al Khaimah</option>
+              <option value="Sharjah">Sharjah</option>
+              <option value="Umm Al-Quwain">Umm Al-Quwain</option>
+            </select>
+          </p>
+          <p>
+            <strong>Zip/Postal Code:</strong>
+            <input v-model.number="order.zip" type="number" />
+          </p>
+          <p>
+            <strong>Contact:</strong>
+            <input v-model.number="order.phone" type="number" />
+          </p>
+          <p>
+            <strong>Payment Method:</strong>
+            <select v-model="order.paymentMethod">
+              <option disabled value="">Select Payment Method</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="PayPal">PayPal</option>
+              <option value="Cash on Delivery">Cash on Delivery</option>
+            </select>
+          </p>
+          <p>
+            <strong>Area:</strong>
+            <input type="radio" id="home" value="Home" v-model="order.method" />
+            <label for="home">Home</label>
+            <input
+              type="radio"
+              id="business"
+              value="Business"
+              v-model="order.method"
+            />
+            <label for="business">Business</label>
+          </p>
+
+          <h2>Order Summary</h2>
+          <h3>Items in your cart:</h3>
+          <ul>
+            <li v-for="item in cart" :key="item.id">
+              {{ item.title }} - {{ item.price }} AED
+              <button v-on:click="removeFromCart(item)">
+                <span class="fas fa-minus"></span>
+              </button>
+            </li>
+          </ul>
+
+          <p>First Name: {{ order.firstName }}</p>
+          <p>Last Name: {{ order.lastName }}</p>
+          <p>Address: {{ order.address }}</p>
+          <p>City: {{ order.city }}</p>
+          <p>State: {{ order.state }}</p>
+          <p>Zip: {{ order.zip }}</p>
+          <p>Payment Method: {{ order.paymentMethod }}</p>
+          <p>Delivery Method: {{ order.method }}</p>
+          <p>Contact: {{ order.phone }}</p>
+          <p><strong>Total Price: {{ totalPrice }} AED</strong></p>
+
+          <!-- Place Order button only visible if all fields are filled -->
+          <button v-if="isOrderComplete" v-on:click="submitForm">
+            Place Order
+          </button>
+        </div>
+      </main>
+
+      <script type="text/javascript">
+        var webstore = new Vue({
+          el: "#app",
+          data: {
+            sortOrder: "asc", // Default sort order
+
+            sitename: "After School Explorers",
+            activities: [
+              {
+                id: 1001,
+                title: "Basketball",
+                description: "Join us for an exciting basketball experience.",
+                location: "Ajman",
+                price: 40,
+                availableInventory: 10,
+                image: "images/basketball.png",
+
+                stars:
+                  "<span class='fas fa-star'></span><span class='fas fa-star'></span><span class='fas fa-star'></span><span class='far fa-star'></span><span class='far fa-star'></span>",
+              },
+              {
+                id: 1002,
+                title: "Gaming Club",
+                description: "Join us for an exciting basketball experience.",
+                location: "Abu Dhabi",
+                price: 90,
+                availableInventory: 15,
+                image: "images/gaming.png",
+                stars:
+                  "<span class='fas fa-star'></span><span class='fas fa-star'></span><span class='fas fa-star'></span><span class='fas fa-star-half-alt'></span><span class='far fa-star'></span>",
+              },
+              {
+                id: 1003,
+                title: "Art Class",
+                description: "Join us for an exciting basketball experience.",
+                location: "Sharjah",
+                price: 80,
+                availableInventory: 8,
+                image: "images/artclass.png",
+
+                stars:
+                  "<span class='fas fa-star'></span><span class='fas fa-star'></span><span class='fas fa-star'></span><span class='fas fa-star'></span><span class='fas fa-star-half-alt'></span>",
+              },
+              {
+                id: 1004,
+                title: "Fashion Club",
+                description: "Join us for an exciting basketball experience.",
+                location: "Dubai",
+                price: 30,
+                availableInventory: 11,
+                image: "images/fashion.png",
+
+                stars:
+                  "<span class='fas fa-star'></span><span class='fas fa-star'></span><span class='far fa-star'></span><span class='far fa-star'></span><span class='far fa-star'></span>",
+              },
+            ],
+            cart: [],
+            order: {
+              firstName: "",
+              lastName: "",
+              address: "",
+              city: "",
+              state: "",
+              zip: null,
+              phone: null,
+              paymentMethod: "",
+              method: "",
+            },
+            showProduct: true,
+            sortCriteria: "name-asc",
+            searchQuery: "",
+            stateFilter: "", // New property for state filter
+          },
+
+          computed: {
+            filteredAndSortedActivities() {
+              const query = this.searchQuery.toLowerCase();
+              const sortedActivities = this.activities
+                .filter((activity) => {
+                  const titleMatches = activity.title
+                    .toLowerCase()
+                    .includes(query);
+                  const locationMatches = activity.location
+                    .toLowerCase()
+                    .includes(query);
+                  const stateMatches =
+                    !this.stateFilter || activity.location === this.stateFilter;
+                  return (titleMatches || locationMatches) && stateMatches;
+                })
+                .sort((a, b) => {
+                  let comparison = 0;
+                  // Compare based on the selected sort criteria
+                  if (this.sortCriteria === "name") {
+                    comparison = a.title.localeCompare(b.title);
+                  } else if (this.sortCriteria === "location") {
+                    comparison = a.location.localeCompare(b.location);
+                  } else if (this.sortCriteria === "price") {
+                    comparison = a.price - b.price;
+                  } else if (this.sortCriteria === "quantity") {
+                    comparison = a.availableInventory - b.availableInventory;
+                  }
+
+                  // Adjust for ascending or descending order
+                  return this.sortOrder === "asc" ? comparison : -comparison;
+                });
+
+              return sortedActivities;
+            },
+
+            totalPrice() {
+              return this.cart.reduce((total, item) => total + item.price, 0);
+            },
+            isOrderComplete() {
+              return (
+                this.order.firstName &&
+                this.order.lastName &&
+                this.order.address &&
+                this.order.city &&
+                this.order.state &&
+                this.order.zip &&
+                this.order.phone &&
+                this.order.paymentMethod &&
+                this.order.method
+              );
+            },
+            cartItemCount() {
+              return this.cart.length;
+            },
+          },
+          methods: {
+            addToCart(activity) {
+              if (this.canAddToCart(activity)) {
+                this.cart.push(activity);
+                activity.availableInventory--;
+                console.log("Cart items:", this.cart); // Debugging line
+              } else {
+                alert("Cannot add to cart: Item is out of stock!");
+              }
+            },
+            removeFromCart(item) {
+              const index = this.cart.indexOf(item);
+              if (index > -1) {
+                this.cart.splice(index, 1);
+                item.availableInventory++;
+                console.log("Cart items after removal:", this.cart); // Debugging line
+              }
+            },
+            showCheckout() {
+              this.showProduct = this.showProduct ? false : true; // Toggle showProduct
+            },
+            submitForm() {
+              alert("Your order was successful!");
+              console.log("Order submitted", this.order);
+              this.resetOrder();
+            },
+            resetOrder() {
+              this.order = {
+                firstName: "",
+                lastName: "",
+                address: "",
+                city: "",
+                state: "",
+                zip: null,
+                phone: null,
+                paymentMethod: "",
+                method: "",
+              };
+              this.cart = [];
+              this.showProduct = true; // Show products again after checkout
+            },
+            searchActivity() {
+              // This method can be simplified or removed since it's handled in the computed property
+            },
+            sortActivities() {
+              // Sorting is handled in computed property
+            },
+            canAddToCart(activity) {
+              return activity.availableInventory > 0;
+            },
+            remainingStock(activity) {
+              return activity.availableInventory > 0
+                ? activity.availableInventory
+                : "Out of stock";
+            },
+            backToActivities() {
+              this.showProduct = true; // Show activities again
+            },
+            filterByState() {
+              // This triggers reactivity when the dropdown selection changes
+            },
+          },
+        });
+      </script>
+    </div>
+  </body>
+</html>
